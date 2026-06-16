@@ -1,55 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-
-function OpenLoopGlyph() {
-  return (
-    <motion.svg
-      aria-hidden="true"
-      className="h-[min(54vw,340px)] w-[min(54vw,340px)] overflow-visible"
-      fill="none"
-      initial={{ opacity: 0, scale: 0.94, rotate: -6 }}
-      animate={{
-        opacity: 1,
-        scale: [0.96, 1.03, 0.96],
-        rotate: [-6, 2, -6],
-      }}
-      transition={{
-        opacity: { duration: 1.4, ease: "easeOut" },
-        duration: 9,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-      viewBox="0 0 240 240"
-    >
-      <motion.circle
-        cx="120"
-        cy="120"
-        r="82"
-        stroke="#D8CAB7"
-        strokeDasharray="2 18"
-        strokeLinecap="round"
-        strokeWidth="1.5"
-        animate={{ opacity: [0.18, 0.36, 0.18] }}
-        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <path
-        d="M72 118C72 82 108 58 142 73C177 88 182 134 151 156C120 178 76 158 82 120C88 82 142 76 164 108C184 137 164 174 126 178"
-        stroke="#7D6A58"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2.8"
-      />
-      <path
-        d="M94 123C96 102 116 91 135 98C154 106 158 130 141 143C124 156 101 146 105 124"
-        stroke="#C2A88B"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </motion.svg>
-  );
-}
+import Loop from "@/components/Loop";
 
 export default function Home() {
   return (
@@ -64,7 +16,11 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.2, ease: "easeOut" }}
         >
-          <OpenLoopGlyph />
+          <Loop
+            className="h-[min(54vw,340px)] w-[min(54vw,340px)] overflow-visible"
+            state="open"
+            tension={2}
+          />
         </motion.div>
 
         <motion.p
