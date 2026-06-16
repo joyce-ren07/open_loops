@@ -11,6 +11,8 @@ type CanvasLoopModel = {
   id: string;
   label: string;
   createdAt: string;
+  completedAt?: string;
+  integratedAt?: string;
   plan?: LoopPlan;
   resurfacedAt?: string;
   tension: number;
@@ -74,6 +76,8 @@ const initialLoops: CanvasLoopModel[] = [
     id: "closed-memory",
     label: "A closed loop",
     createdAt: "2026-06-10T12:00:00.000Z",
+    completedAt: "2026-06-16T10:30:00.000Z",
+    integratedAt: "2026-06-16T10:30:02.000Z",
     tension: 1,
     state: "completed",
     size: 184,
@@ -108,6 +112,15 @@ const placementSequence = [
   { left: "36%", top: "18%", rotate: -8, size: 138 },
   { left: "70%", top: "82%", rotate: 21, size: 168 },
   { left: "28%", top: "42%", rotate: -2, size: 206 },
+];
+
+const starPlacements = [
+  { left: "19%", top: "28%", size: 9 },
+  { left: "71%", top: "24%", size: 7 },
+  { left: "48%", top: "42%", size: 10 },
+  { left: "82%", top: "58%", size: 6 },
+  { left: "31%", top: "66%", size: 8 },
+  { left: "61%", top: "76%", size: 7 },
 ];
 
 function CanvasLoop({
@@ -275,6 +288,15 @@ function formatCreatedDate(createdAt: string) {
     timeZone: "UTC",
     year: "numeric",
   }).format(new Date(createdAt));
+}
+
+function formatCompletionDate(completedAt: string) {
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(new Date(completedAt));
 }
 
 function LoopDetailModal({
@@ -675,10 +697,134 @@ function HorizonSheet({
   );
 }
 
+function ConstellationSheet({
+  loops,
+  onClose,
+}: {
+  loops: CanvasLoopModel[];
+  onClose: () => void;
+}) {
+  const completedLoops = loops.filter(
+    (loop) => loop.state === "completed" && loop.integratedAt && loop.completedAt,
+  );
+  const [selectedStarId, setSelectedStarId] = useState<string | null>(
+    completedLoops[0]?.id ?? null,
+  );
+  const selectedStar =
+    completedLoops.find((loop) => loop.id === selectedStarId) ?? null;
+
+  return (
+    <motion.div
+      aria-labelledby="constellation-title"
+      aria-modal="true"
+      className="fixed inset-0 z-50 overflow-hidden bg-[#111419] text-[#F7F4EE]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(247,244,238,0.13),transparent_22rem),radial-gradient(circle_at_70%_70%,rgba(139,122,104,0.11),transparent_24rem),linear-gradient(180deg,#15171d,#0f1218)]" />
+      <div className="absolute inset-0 opacity-35 [background-image:radial-gradient(circle,rgba(247,244,238,0.42)_0.7px,transparent_0.8px)] [background-size:42px_42px]" />
+
+      <motion.div
+        className="relative z-10 flex min-h-screen flex-col px-6 py-8 sm:px-10"
+        initial={{ y: 18 }}
+        animate={{ y: 0 }}
+        exit={{ y: 18 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <p className="text-[0.7rem] tracking-[0.32em] text-[#D8CAB7]/60 uppercase">
+              Constellation
+            </p>
+            <h2
+              className="mt-3 max-w-xl text-3xl leading-tight font-light tracking-[-0.045em] text-[#F7F4EE] sm:text-4xl"
+              id="constellation-title"
+            >
+              Completed intentions no longer demand attention. They become part
+              of the story.
+            </h2>
+          </div>
+
+          <button
+            aria-label="Close Constellation"
+            className="rounded-full px-2 py-1 text-xl leading-none text-[#D8CAB7]/70 transition-colors hover:text-[#F7F4EE] focus-visible:ring-2 focus-visible:ring-[#F7F4EE]/25 focus-visible:outline-none"
+            onClick={onClose}
+            type="button"
+          >
+            x
+          </button>
+        </div>
+
+        <div className="relative mt-8 min-h-[48vh] flex-1 overflow-hidden rounded-[2rem] border border-[#F7F4EE]/8 bg-[#F7F4EE]/[0.025]">
+          {completedLoops.length > 0 ? (
+            completedLoops.map((loop, index) => {
+              const placement = starPlacements[index % starPlacements.length];
+              const style = {
+                left: placement.left,
+                top: placement.top,
+              } satisfies CSSProperties;
+
+              return (
+                <motion.button
+                  aria-label={`Remember ${loop.label}`}
+                  className="absolute rounded-full bg-[#F7F4EE] shadow-[0_0_22px_rgba(247,244,238,0.34)] focus-visible:ring-2 focus-visible:ring-[#F7F4EE]/40 focus-visible:outline-none"
+                  initial={{ opacity: 0, scale: 0.4 }}
+                  animate={{
+                    opacity: selectedStarId === loop.id ? 0.96 : 0.58,
+                    scale: selectedStarId === loop.id ? 1.24 : 1,
+                    x: "-50%",
+                    y: "-50%",
+                  }}
+                  key={loop.id}
+                  onClick={() => setSelectedStarId(loop.id)}
+                  style={{
+                    ...style,
+                    height: placement.size,
+                    width: placement.size,
+                  }}
+                  transition={{ duration: 0.7, ease: "easeOut" }}
+                  type="button"
+                />
+              );
+            })
+          ) : (
+            <p className="absolute top-1/2 left-1/2 max-w-xs -translate-x-1/2 -translate-y-1/2 text-center text-sm leading-6 text-[#D8CAB7]/66">
+              Nothing has settled into memory yet.
+            </p>
+          )}
+        </div>
+
+        <AnimatePresence mode="wait">
+          {selectedStar?.completedAt ? (
+            <motion.div
+              className="mx-auto mt-7 max-w-md text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              key={selectedStar.id}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+              <p className="text-xl leading-snug font-light tracking-[-0.03em]">
+                {selectedStar.label}
+              </p>
+              <p className="mt-3 text-sm text-[#D8CAB7]/66">
+                Completed {formatCompletionDate(selectedStar.completedAt)}
+              </p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const [loops, setLoops] = useState(initialLoops);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHorizonOpen, setIsHorizonOpen] = useState(false);
+  const [isConstellationOpen, setIsConstellationOpen] = useState(false);
   const [selectedLoopId, setSelectedLoopId] = useState<string | null>(null);
   const [planningLoopId, setPlanningLoopId] = useState<string | null>(null);
   const [arrivalMessage, setArrivalMessage] = useState<string | null>(null);
@@ -688,6 +834,9 @@ export default function Home() {
     loops.find((loop) => loop.id === selectedLoopId) ?? null;
   const planningLoop =
     loops.find((loop) => loop.id === planningLoopId) ?? null;
+  const canvasLoops = loops.filter(
+    (loop) => loop.state !== "completed" || !loop.integratedAt,
+  );
 
   function closeModal() {
     setIsModalOpen(false);
@@ -748,11 +897,47 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [arrivalMessage]);
 
+  useEffect(() => {
+    const timers = loops
+      .filter(
+        (loop) => loop.state === "completed" && loop.completedAt && !loop.integratedAt,
+      )
+      .map((loop) =>
+        window.setTimeout(() => {
+          setLoops((currentLoops) =>
+            currentLoops.map((currentLoop) =>
+              currentLoop.id === loop.id
+                ? {
+                    ...currentLoop,
+                    integratedAt:
+                      currentLoop.integratedAt ?? new Date().toISOString(),
+                  }
+                : currentLoop,
+            ),
+          );
+        }, 1800),
+      );
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [loops]);
+
   function handleResolveLoop(action: "complete" | "plan" | "later") {
     if (action === "complete") {
+      const completedAt = new Date().toISOString();
+
       setLoops((currentLoops) =>
         currentLoops.map((loop) =>
-          loop.id === selectedLoopId ? { ...loop, state: "completed" } : loop,
+          loop.id === selectedLoopId
+            ? {
+                ...loop,
+                completedAt,
+                delay: 0,
+                integratedAt: undefined,
+                state: "completed",
+              }
+            : loop,
         ),
       );
     }
@@ -827,13 +1012,14 @@ export default function Home() {
         </motion.p>
 
         <div className="absolute inset-0">
-          {loops.map((loop) => (
+          {canvasLoops.map((loop) => (
             <CanvasLoop
-              key={`${loop.id}-${loop.resurfacedAt ?? "resting"}`}
+              key={`${loop.id}-${loop.resurfacedAt ?? "resting"}-${loop.completedAt ?? "open"}`}
               loop={loop}
               onSelect={(loopId) => {
                 setIsModalOpen(false);
                 setIsHorizonOpen(false);
+                setIsConstellationOpen(false);
                 setPlanningLoopId(null);
                 setSelectedLoopId(loopId);
               }}
@@ -872,6 +1058,7 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         onClick={() => {
           setIsModalOpen(false);
+          setIsConstellationOpen(false);
           setSelectedLoopId(null);
           setPlanningLoopId(null);
           setIsHorizonOpen(true);
@@ -880,6 +1067,24 @@ export default function Home() {
         type="button"
       >
         Horizon
+      </motion.button>
+
+      <motion.button
+        aria-label="Open Constellation"
+        className="fixed bottom-[4.8rem] left-6 z-30 rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/55 px-4 py-3 text-xs tracking-[0.22em] text-[#6E6257]/80 uppercase shadow-[0_10px_30px_rgba(76,59,43,0.06)] backdrop-blur-sm transition-colors hover:bg-[#FFFDF8]/70 hover:text-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/35 focus-visible:outline-none sm:bottom-[5.25rem] sm:left-8"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        onClick={() => {
+          setIsModalOpen(false);
+          setIsHorizonOpen(false);
+          setSelectedLoopId(null);
+          setPlanningLoopId(null);
+          setIsConstellationOpen(true);
+        }}
+        transition={{ duration: 0.9, ease: "easeOut", delay: 0.56 }}
+        type="button"
+      >
+        Constellation
       </motion.button>
 
       <motion.button
@@ -892,6 +1097,7 @@ export default function Home() {
           setSelectedLoopId(null);
           setPlanningLoopId(null);
           setIsHorizonOpen(false);
+          setIsConstellationOpen(false);
           setIsModalOpen(true);
         }}
         transition={{ duration: 0.9, ease: "easeOut", delay: 0.56 }}
@@ -937,6 +1143,15 @@ export default function Home() {
       <AnimatePresence>
         {isHorizonOpen ? (
           <HorizonSheet loops={loops} onClose={() => setIsHorizonOpen(false)} />
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isConstellationOpen ? (
+          <ConstellationSheet
+            loops={loops}
+            onClose={() => setIsConstellationOpen(false)}
+          />
         ) : null}
       </AnimatePresence>
     </main>

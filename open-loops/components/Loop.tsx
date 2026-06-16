@@ -19,7 +19,11 @@ function normalizeTension(tension: number) {
   return Math.min(5, Math.max(1, tension));
 }
 
-function getVisibleLength(state: LoopState, tension: number, resurfaced: boolean) {
+function getVisibleLength(
+  state: LoopState,
+  tension: number,
+  resurfaced: boolean,
+) {
   if (state === "completed") {
     return 1;
   }
@@ -43,8 +47,8 @@ function getStroke(state: LoopState, tension: number) {
   if (state === "completed") {
     return {
       color: "#8B8176",
-      width: 2.2,
-      opacity: 0.44,
+      width: 1.55,
+      opacity: 0.28,
     };
   }
 
@@ -77,6 +81,7 @@ export default function Loop({
   const isPlanned = state === "planned";
   const shouldAnimate = !isCompleted && !prefersReducedMotion;
   const dashOffset = isPlanned ? 0.018 : 0.08;
+  const dashArray = `${visibleLength} ${Math.max(0, 1 - visibleLength)}`;
 
   return (
     <motion.svg
@@ -94,8 +99,16 @@ export default function Loop({
                 : resurfaced
                   ? [0.99, 1.018, 0.99]
                   : [0.97, 1.035, 0.97],
-              x: isPlanned ? [0, 0.6, 0] : resurfaced ? [0, 1.8, 0] : [0, 4, -3, 0],
-              y: isPlanned ? [0, -0.8, 0] : resurfaced ? [0, -2.4, 0] : [0, -5, 3, 0],
+              x: isPlanned
+                ? [0, 0.6, 0]
+                : resurfaced
+                  ? [0, 1.8, 0]
+                  : [0, 4, -3, 0],
+              y: isPlanned
+                ? [0, -0.8, 0]
+                : resurfaced
+                  ? [0, -2.4, 0]
+                  : [0, -5, 3, 0],
               rotate: isPlanned
                 ? [-0.4, 0.35, -0.4]
                 : resurfaced
@@ -117,14 +130,16 @@ export default function Loop({
         d={LOOP_PATH}
         pathLength="1"
         stroke={stroke.color}
-        strokeDasharray={`${visibleLength} ${1 - visibleLength}`}
+        strokeDasharray={dashArray}
         strokeDashoffset={isCompleted ? 0 : dashOffset}
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeOpacity={stroke.opacity}
         strokeWidth={stroke.width}
         animate={
-          shouldAnimate
+          isCompleted
+            ? { strokeDasharray: "1 0", strokeDashoffset: 0 }
+            : shouldAnimate
             ? {
                 strokeDashoffset: isPlanned
                   ? [dashOffset, dashOffset + 0.004, dashOffset]
@@ -135,7 +150,7 @@ export default function Loop({
             : { strokeDashoffset: 0 }
         }
         transition={{
-          duration: isPlanned ? 24 : resurfaced ? 12 : 9,
+          duration: isCompleted ? 1.15 : isPlanned ? 24 : resurfaced ? 12 : 9,
           repeat: shouldAnimate ? Infinity : 0,
           ease: "easeInOut",
         }}
