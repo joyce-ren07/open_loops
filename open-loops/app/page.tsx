@@ -2,6 +2,97 @@
 
 import { motion } from "framer-motion";
 import Loop from "@/components/Loop";
+import type { LoopState } from "@/components/Loop";
+import type { CSSProperties } from "react";
+
+type ExampleLoop = {
+  id: string;
+  tension: number;
+  state: LoopState;
+  size: number;
+  left: string;
+  top: string;
+  rotate: number;
+  delay: number;
+};
+
+const exampleLoops: ExampleLoop[] = [
+  {
+    id: "urgent-open",
+    tension: 5,
+    state: "open",
+    size: 218,
+    left: "14%",
+    top: "22%",
+    rotate: -13,
+    delay: 0.08,
+  },
+  {
+    id: "soft-plan",
+    tension: 2,
+    state: "planned",
+    size: 142,
+    left: "68%",
+    top: "16%",
+    rotate: 9,
+    delay: 0.18,
+  },
+  {
+    id: "central-open",
+    tension: 3,
+    state: "open",
+    size: 318,
+    left: "43%",
+    top: "45%",
+    rotate: 4,
+    delay: 0,
+  },
+  {
+    id: "closed-memory",
+    tension: 1,
+    state: "completed",
+    size: 184,
+    left: "78%",
+    top: "58%",
+    rotate: -7,
+    delay: 0.34,
+  },
+  {
+    id: "quiet-plan",
+    tension: 4,
+    state: "planned",
+    size: 166,
+    left: "24%",
+    top: "78%",
+    rotate: 17,
+    delay: 0.26,
+  },
+];
+
+function CanvasLoop({ loop }: { loop: ExampleLoop }) {
+  const style = {
+    left: loop.left,
+    top: loop.top,
+    transform: `translate(-50%, -50%) rotate(${loop.rotate}deg)`,
+  } satisfies CSSProperties;
+
+  return (
+    <motion.div
+      className="absolute"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1.2, ease: "easeOut", delay: loop.delay }}
+      style={style}
+    >
+      <Loop
+        className="overflow-visible drop-shadow-[0_18px_44px_rgba(70,55,40,0.045)]"
+        size={loop.size}
+        state={loop.state}
+        tension={loop.tension}
+      />
+    </motion.div>
+  );
+}
 
 export default function Home() {
   return (
@@ -9,28 +100,24 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.82),rgba(247,244,238,0)_32rem)]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] mix-blend-multiply [background-image:linear-gradient(115deg,rgba(91,74,56,0.08)_0.5px,transparent_0.5px),linear-gradient(rgba(91,74,56,0.05)_0.5px,transparent_0.5px)] [background-size:38px_38px]" />
 
-      <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pb-28 text-center">
-        <motion.div
-          className="mb-8"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-        >
-          <Loop
-            className="h-[min(54vw,340px)] w-[min(54vw,340px)] overflow-visible"
-            state="open"
-            tension={2}
-          />
-        </motion.div>
-
+      <section
+        aria-label="Open Loops mental space"
+        className="relative z-10 min-h-screen"
+      >
         <motion.p
-          className="text-[0.78rem] tracking-[0.34em] text-[#6E6257] uppercase"
-          initial={{ opacity: 0, y: 8 }}
+          className="absolute top-8 left-8 text-[0.72rem] tracking-[0.32em] text-[#6E6257]/70 uppercase"
+          initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: "easeOut", delay: 0.18 }}
+          transition={{ duration: 1, ease: "easeOut", delay: 0.12 }}
         >
           Open Loops
         </motion.p>
+
+        <div className="absolute inset-0">
+          {exampleLoops.map((loop) => (
+            <CanvasLoop key={loop.id} loop={loop} />
+          ))}
+        </div>
       </section>
 
       <motion.p
