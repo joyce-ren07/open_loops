@@ -3,12 +3,14 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Loop from "@/components/Loop";
 import type { LoopState } from "@/components/Loop";
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import type { CSSProperties } from "react";
+import type { FormEvent } from "react";
 
 type CanvasLoopModel = {
   id: string;
   label: string;
+  createdAt: string;
   tension: number;
   state: LoopState;
   size: number;
@@ -22,6 +24,7 @@ const initialLoops: CanvasLoopModel[] = [
   {
     id: "urgent-open",
     label: "An unresolved thought",
+    createdAt: "2026-06-12T12:00:00.000Z",
     tension: 5,
     state: "open",
     size: 218,
@@ -33,6 +36,7 @@ const initialLoops: CanvasLoopModel[] = [
   {
     id: "soft-plan",
     label: "A gentler plan",
+    createdAt: "2026-06-13T12:00:00.000Z",
     tension: 2,
     state: "planned",
     size: 142,
@@ -44,6 +48,7 @@ const initialLoops: CanvasLoopModel[] = [
   {
     id: "central-open",
     label: "Something mentally present",
+    createdAt: "2026-06-14T12:00:00.000Z",
     tension: 3,
     state: "open",
     size: 318,
@@ -55,6 +60,7 @@ const initialLoops: CanvasLoopModel[] = [
   {
     id: "closed-memory",
     label: "A closed loop",
+    createdAt: "2026-06-10T12:00:00.000Z",
     tension: 1,
     state: "completed",
     size: 184,
@@ -66,6 +72,7 @@ const initialLoops: CanvasLoopModel[] = [
   {
     id: "quiet-plan",
     label: "A quiet next step",
+    createdAt: "2026-06-15T12:00:00.000Z",
     tension: 4,
     state: "planned",
     size: 166,
@@ -85,16 +92,22 @@ const placementSequence = [
   { left: "28%", top: "42%", rotate: -2, size: 206 },
 ];
 
-function CanvasLoop({ loop }: { loop: CanvasLoopModel }) {
+function CanvasLoop({
+  loop,
+  onSelect,
+}: {
+  loop: CanvasLoopModel;
+  onSelect: (loopId: string) => void;
+}) {
   const style = {
     left: loop.left,
     top: loop.top,
   } satisfies CSSProperties;
 
   return (
-    <motion.div
+    <motion.button
       aria-label={loop.label}
-      className="absolute"
+      className="absolute cursor-pointer border-0 bg-transparent p-0 focus-visible:ring-2 focus-visible:ring-[#8B7A68]/25 focus-visible:outline-none"
       initial={{
         opacity: 0,
         scale: 0.9,
@@ -112,7 +125,11 @@ function CanvasLoop({ loop }: { loop: CanvasLoopModel }) {
         filter: "blur(0px)",
       }}
       transition={{ duration: 1.2, ease: "easeOut", delay: loop.delay }}
+      onClick={() => onSelect(loop.id)}
       style={style}
+      type="button"
+      whileHover={{ scale: 1.018 }}
+      whileTap={{ scale: 0.985 }}
     >
       <Loop
         className="overflow-visible drop-shadow-[0_18px_44px_rgba(70,55,40,0.045)]"
@@ -120,7 +137,7 @@ function CanvasLoop({ loop }: { loop: CanvasLoopModel }) {
         state={loop.state}
         tension={loop.tension}
       />
-    </motion.div>
+    </motion.button>
   );
 }
 
@@ -231,14 +248,119 @@ function AddLoopModal({
   );
 }
 
+function formatCreatedDate(createdAt: string) {
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(new Date(createdAt));
+}
+
+function LoopDetailModal({
+  loop,
+  onResolve,
+}: {
+  loop: CanvasLoopModel;
+  onResolve: (action: "complete" | "plan" | "later") => void;
+}) {
+  return (
+    <motion.div
+      aria-labelledby="loop-detail-title"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center px-5 py-10"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+    >
+      <div className="absolute inset-0 bg-[#4C3B2B]/10 backdrop-blur-[2px]" />
+
+      <motion.div
+        className="relative w-full max-w-md rounded-[2rem] border border-[#6E6257]/12 bg-[#FCFAF5]/90 px-7 py-8 text-center text-[#332C25] shadow-[0_28px_80px_rgba(76,59,43,0.14)] backdrop-blur-md"
+        initial={{ opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 12, scale: 0.98 }}
+        transition={{ duration: 0.42, ease: "easeOut" }}
+      >
+        <p className="mb-4 text-[0.7rem] tracking-[0.28em] text-[#6E6257]/62 uppercase">
+          Open Loop
+        </p>
+
+        <h2
+          className="mx-auto max-w-sm text-3xl leading-tight font-light tracking-[-0.04em]"
+          id="loop-detail-title"
+        >
+          {loop.label}
+        </h2>
+
+        <p className="mt-4 text-sm text-[#6E6257]/72">
+          Created {formatCreatedDate(loop.createdAt)}
+        </p>
+
+        <p className="mt-10 text-base text-[#4F463D]">
+          How do you want to resolve this?
+        </p>
+
+        <div className="mt-7 grid gap-3">
+          <button
+            className="rounded-full border border-[#6E6257]/14 bg-[#332C25]/88 px-5 py-3 text-sm tracking-[0.02em] text-[#F7F4EE] transition hover:bg-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/35 focus-visible:outline-none"
+            onClick={() => onResolve("complete")}
+            type="button"
+          >
+            Complete
+          </button>
+          <button
+            className="rounded-full border border-[#6E6257]/16 bg-[#F7F4EE]/70 px-5 py-3 text-sm tracking-[0.02em] text-[#4F463D] transition hover:bg-[#FFFDF8]/76 focus-visible:ring-2 focus-visible:ring-[#8B7A68]/30 focus-visible:outline-none"
+            onClick={() => onResolve("plan")}
+            type="button"
+          >
+            Make a Plan
+          </button>
+          <button
+            className="rounded-full px-5 py-3 text-sm tracking-[0.02em] text-[#6E6257]/78 transition hover:text-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/25 focus-visible:outline-none"
+            onClick={() => onResolve("later")}
+            type="button"
+          >
+            Later
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const [loops, setLoops] = useState(initialLoops);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLoopId, setSelectedLoopId] = useState<string | null>(null);
   const [task, setTask] = useState("");
   const [mentalPresence, setMentalPresence] = useState(3);
+  const selectedLoop =
+    loops.find((loop) => loop.id === selectedLoopId) ?? null;
 
   function closeModal() {
     setIsModalOpen(false);
+  }
+
+  function handleResolveLoop(action: "complete" | "plan" | "later") {
+    if (action === "complete") {
+      setLoops((currentLoops) =>
+        currentLoops.map((loop) =>
+          loop.id === selectedLoopId ? { ...loop, state: "completed" } : loop,
+        ),
+      );
+    }
+
+    if (action === "plan") {
+      setLoops((currentLoops) =>
+        currentLoops.map((loop) =>
+          loop.id === selectedLoopId ? { ...loop, state: "planned" } : loop,
+        ),
+      );
+    }
+
+    setSelectedLoopId(null);
   }
 
   function handleCreateLoop(event: FormEvent<HTMLFormElement>) {
@@ -254,6 +376,7 @@ export default function Home() {
     const createdLoop: CanvasLoopModel = {
       id: `loop-${Date.now()}`,
       label: trimmedTask,
+      createdAt: new Date().toISOString(),
       tension: mentalPresence,
       state: "open",
       size: placement.size + ((loops.length % 3) - 1) * 12,
@@ -289,7 +412,14 @@ export default function Home() {
 
         <div className="absolute inset-0">
           {loops.map((loop) => (
-            <CanvasLoop key={loop.id} loop={loop} />
+            <CanvasLoop
+              key={loop.id}
+              loop={loop}
+              onSelect={(loopId) => {
+                setIsModalOpen(false);
+                setSelectedLoopId(loopId);
+              }}
+            />
           ))}
         </div>
       </section>
@@ -309,7 +439,10 @@ export default function Home() {
         initial={{ opacity: 0, scale: 0.94 }}
         animate={{ opacity: 1, scale: 1 }}
         whileTap={{ scale: 0.96 }}
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => {
+          setSelectedLoopId(null);
+          setIsModalOpen(true);
+        }}
         transition={{ duration: 0.9, ease: "easeOut", delay: 0.56 }}
         type="button"
       >
@@ -325,6 +458,16 @@ export default function Home() {
             onSubmit={handleCreateLoop}
             onTaskChange={setTask}
             task={task}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedLoop ? (
+          <LoopDetailModal
+            key={selectedLoop.id}
+            loop={selectedLoop}
+            onResolve={handleResolveLoop}
           />
         ) : null}
       </AnimatePresence>
