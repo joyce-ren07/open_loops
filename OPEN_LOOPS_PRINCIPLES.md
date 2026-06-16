@@ -10,7 +10,7 @@ Most task management systems assume that unfinished tasks stop occupying our min
 
 But human cognition appears to work differently.
 
-Research suggests that specific planning can reduce the mental burden of unfinished goals even before they are completed. In other words, the mind may not require completion to let go--it may require confidence that the future has been meaningfully accounted for.
+Research suggests that specific planning can reduce the mental burden of unfinished goals even before they are completed. In other words, the mind may not require completion to let go—it may require confidence that the future has been meaningfully accounted for.
 
 Open Loops explores this question:
 
@@ -26,7 +26,7 @@ The goal is understanding.
 
 ---
 
-## Core Design Question
+# Core Design Question
 
 How can interfaces help people distinguish between:
 
@@ -38,7 +38,7 @@ Can an interface reveal that these states feel psychologically different?
 
 ---
 
-## The Human Problem
+# The Human Problem
 
 Many people experience a constant background hum of unfinished obligations:
 
@@ -63,9 +63,9 @@ rather than:
 
 ---
 
-## Psychological Foundations
+# Psychological Foundations
 
-### 1. The Zeigarnik Effect
+## 1. The Zeigarnik Effect
 
 Psychologist Bluma Zeigarnik observed that unfinished tasks tend to remain more cognitively accessible than completed ones.
 
@@ -81,7 +81,7 @@ Open loops visually embody unresolved tension.
 
 ---
 
-### 2. Masicampo & Baumeister (2011)
+## 2. Masicampo & Baumeister (2011)
 
 Later research complicated the common interpretation of the Zeigarnik Effect.
 
@@ -107,7 +107,7 @@ The interface should distinguish between them.
 
 ---
 
-### 3. Implementation Intentions
+## 3. Implementation Intentions
 
 Research by Peter Gollwitzer suggests that implementation intentions are especially effective when structured as:
 
@@ -124,7 +124,6 @@ Design implication:
 > Planning should require specificity.
 
 The system asks:
-
 - When?
 - Where?
 - What is the first step?
@@ -133,7 +132,7 @@ rather than allowing a generic reminder.
 
 ---
 
-### 4. Gestalt Principle of Closure
+## 4. Gestalt Principle of Closure
 
 Humans naturally seek complete forms.
 
@@ -155,7 +154,7 @@ Users should feel the difference before consciously interpreting it.
 
 ---
 
-### 5. Subjective Salience
+## 5. Subjective Salience
 
 Not all unfinished tasks occupy the mind equally.
 
@@ -175,7 +174,7 @@ The visualization reflects perceived tension rather than objective priority.
 
 ---
 
-### 6. Experience Sampling
+## 6. Experience Sampling
 
 Retrospective memory is unreliable.
 
@@ -195,7 +194,7 @@ Users can discover which forms of resolution actually reduce mental intrusion.
 
 ---
 
-## Design Philosophy
+# Design Philosophy
 
 Open Loops is not trying to maximize productivity.
 
@@ -230,7 +229,7 @@ The desired outcome is:
 
 ---
 
-## Product Principles
+# Product Principles
 
 DO:
 
@@ -258,7 +257,7 @@ If not, remove it.
 
 ---
 
-## Success Criteria
+# Success Criteria
 
 A successful version of Open Loops causes users to notice something true about themselves.
 
