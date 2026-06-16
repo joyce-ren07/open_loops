@@ -26,7 +26,7 @@ function getVisibleLength(state: LoopState, tension: number) {
   const normalized = normalizeTension(tension);
 
   if (state === "planned") {
-    return 0.968 - normalized * 0.004;
+    return 0.988 - normalized * 0.002;
   }
 
   return 0.72 - normalized * 0.035;
@@ -83,16 +83,16 @@ export default function Loop({
         shouldAnimate
           ? {
               opacity: 1,
-              scale: isPlanned ? [1, 1.012, 1] : [0.97, 1.035, 0.97],
-              x: isPlanned ? [0, 1.5, 0] : [0, 4, -3, 0],
-              y: isPlanned ? [0, -1.5, 0] : [0, -5, 3, 0],
-              rotate: isPlanned ? [-2, 0.8, -2] : [-3, 2.5, -1.5, -3],
+              scale: isPlanned ? [1, 1.006, 1] : [0.97, 1.035, 0.97],
+              x: isPlanned ? [0, 0.6, 0] : [0, 4, -3, 0],
+              y: isPlanned ? [0, -0.8, 0] : [0, -5, 3, 0],
+              rotate: isPlanned ? [-0.4, 0.35, -0.4] : [-3, 2.5, -1.5, -3],
             }
           : { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 }
       }
       transition={{
         opacity: { duration: 1.1, ease: "easeOut" },
-        duration: isPlanned ? 14 : 8.5,
+        duration: isPlanned ? 22 : 8.5,
         repeat: shouldAnimate ? Infinity : 0,
         ease: "easeInOut",
       }}
@@ -113,13 +113,13 @@ export default function Loop({
           shouldAnimate
             ? {
                 strokeDashoffset: isPlanned
-                  ? [dashOffset, dashOffset + 0.015, dashOffset]
+                  ? [dashOffset, dashOffset + 0.004, dashOffset]
                   : [dashOffset, dashOffset + 0.045, dashOffset],
               }
             : { strokeDashoffset: 0 }
         }
         transition={{
-          duration: isPlanned ? 16 : 9,
+          duration: isPlanned ? 24 : 9,
           repeat: shouldAnimate ? Infinity : 0,
           ease: "easeInOut",
         }}

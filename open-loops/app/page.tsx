@@ -11,6 +11,7 @@ type CanvasLoopModel = {
   id: string;
   label: string;
   createdAt: string;
+  plan?: LoopPlan;
   tension: number;
   state: LoopState;
   size: number;
@@ -18,6 +19,12 @@ type CanvasLoopModel = {
   top: string;
   rotate: number;
   delay: number;
+};
+
+type LoopPlan = {
+  when: string;
+  where: string;
+  firstAction: string;
 };
 
 const initialLoops: CanvasLoopModel[] = [
@@ -330,14 +337,140 @@ function LoopDetailModal({
   );
 }
 
+function PlanLoopModal({
+  loop,
+  onClose,
+  onSubmit,
+}: {
+  loop: CanvasLoopModel;
+  onClose: () => void;
+  onSubmit: (plan: LoopPlan) => void;
+}) {
+  const [when, setWhen] = useState(loop.plan?.when ?? "");
+  const [where, setWhere] = useState(loop.plan?.where ?? "");
+  const [firstAction, setFirstAction] = useState(
+    loop.plan?.firstAction ?? "",
+  );
+  const isSpecific =
+    when.trim().length > 0 &&
+    where.trim().length > 0 &&
+    firstAction.trim().length > 0;
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!isSpecific) {
+      return;
+    }
+
+    onSubmit({
+      when: when.trim(),
+      where: where.trim(),
+      firstAction: firstAction.trim(),
+    });
+  }
+
+  return (
+    <motion.div
+      aria-labelledby="plan-loop-title"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center px-5 py-10"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+    >
+      <button
+        aria-label="Return to canvas"
+        className="absolute inset-0 cursor-default bg-[#4C3B2B]/10 backdrop-blur-[2px]"
+        onClick={onClose}
+        type="button"
+      />
+
+      <motion.form
+        className="relative w-full max-w-md rounded-[2rem] border border-[#6E6257]/12 bg-[#FCFAF5]/92 px-7 py-8 text-[#332C25] shadow-[0_28px_80px_rgba(76,59,43,0.14)] backdrop-blur-md"
+        initial={{ opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 12, scale: 0.98 }}
+        onSubmit={handleSubmit}
+        transition={{ duration: 0.42, ease: "easeOut" }}
+      >
+        <p className="mb-4 text-center text-[0.7rem] tracking-[0.28em] text-[#6E6257]/62 uppercase">
+          Partial closure
+        </p>
+
+        <h2
+          className="mx-auto max-w-sm text-center text-3xl leading-tight font-light tracking-[-0.04em]"
+          id="plan-loop-title"
+        >
+          {loop.label}
+        </h2>
+
+        <div className="mt-9 space-y-6">
+          <label className="block text-sm text-[#6E6257]" htmlFor="plan-when">
+            When?
+            <input
+              autoFocus
+              className="mt-3 w-full rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-5 py-3 text-base text-[#332C25] outline-none transition focus:border-[#8B7A68]/35 focus:bg-[#FFFDF8]/78"
+              id="plan-when"
+              onChange={(event) => setWhen(event.target.value)}
+              placeholder="A real moment"
+              type="text"
+              value={when}
+            />
+          </label>
+
+          <label className="block text-sm text-[#6E6257]" htmlFor="plan-where">
+            Where?
+            <input
+              className="mt-3 w-full rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-5 py-3 text-base text-[#332C25] outline-none transition focus:border-[#8B7A68]/35 focus:bg-[#FFFDF8]/78"
+              id="plan-where"
+              onChange={(event) => setWhere(event.target.value)}
+              placeholder="The place it will happen"
+              type="text"
+              value={where}
+            />
+          </label>
+
+          <label
+            className="block text-sm text-[#6E6257]"
+            htmlFor="plan-first-action"
+          >
+            What is the first action?
+            <input
+              className="mt-3 w-full rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-5 py-3 text-base text-[#332C25] outline-none transition focus:border-[#8B7A68]/35 focus:bg-[#FFFDF8]/78"
+              id="plan-first-action"
+              onChange={(event) => setFirstAction(event.target.value)}
+              placeholder="The smallest honest movement"
+              type="text"
+              value={firstAction}
+            />
+          </label>
+        </div>
+
+        <button
+          className="mt-9 w-full rounded-full border border-[#6E6257]/14 bg-[#332C25]/88 px-5 py-3 text-sm tracking-[0.02em] text-[#F7F4EE] transition hover:bg-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+          disabled={!isSpecific}
+          type="submit"
+        >
+          Let it rest here
+        </button>
+      </motion.form>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const [loops, setLoops] = useState(initialLoops);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLoopId, setSelectedLoopId] = useState<string | null>(null);
+  const [planningLoopId, setPlanningLoopId] = useState<string | null>(null);
   const [task, setTask] = useState("");
   const [mentalPresence, setMentalPresence] = useState(3);
   const selectedLoop =
     loops.find((loop) => loop.id === selectedLoopId) ?? null;
+  const planningLoop =
+    loops.find((loop) => loop.id === planningLoopId) ?? null;
 
   function closeModal() {
     setIsModalOpen(false);
@@ -353,14 +486,25 @@ export default function Home() {
     }
 
     if (action === "plan") {
-      setLoops((currentLoops) =>
-        currentLoops.map((loop) =>
-          loop.id === selectedLoopId ? { ...loop, state: "planned" } : loop,
-        ),
-      );
+      setPlanningLoopId(selectedLoopId);
     }
 
     setSelectedLoopId(null);
+  }
+
+  function handleSubmitPlan(plan: LoopPlan) {
+    setLoops((currentLoops) =>
+      currentLoops.map((loop) =>
+        loop.id === planningLoopId
+          ? {
+              ...loop,
+              plan,
+              state: "planned",
+            }
+          : loop,
+      ),
+    );
+    setPlanningLoopId(null);
   }
 
   function handleCreateLoop(event: FormEvent<HTMLFormElement>) {
@@ -417,6 +561,7 @@ export default function Home() {
               loop={loop}
               onSelect={(loopId) => {
                 setIsModalOpen(false);
+                setPlanningLoopId(null);
                 setSelectedLoopId(loopId);
               }}
             />
@@ -441,6 +586,7 @@ export default function Home() {
         whileTap={{ scale: 0.96 }}
         onClick={() => {
           setSelectedLoopId(null);
+          setPlanningLoopId(null);
           setIsModalOpen(true);
         }}
         transition={{ duration: 0.9, ease: "easeOut", delay: 0.56 }}
@@ -468,6 +614,17 @@ export default function Home() {
             key={selectedLoop.id}
             loop={selectedLoop}
             onResolve={handleResolveLoop}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {planningLoop ? (
+          <PlanLoopModal
+            key={planningLoop.id}
+            loop={planningLoop}
+            onClose={() => setPlanningLoopId(null)}
+            onSubmit={handleSubmitPlan}
           />
         ) : null}
       </AnimatePresence>
