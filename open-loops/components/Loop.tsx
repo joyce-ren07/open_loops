@@ -1,7 +1,6 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import type { ComponentPropsWithoutRef } from "react";
 
 export type LoopState = "open" | "planned" | "completed";
 
@@ -10,7 +9,7 @@ type LoopProps = {
   state: LoopState;
   size?: number;
   className?: string;
-} & Omit<ComponentPropsWithoutRef<"svg">, "className">;
+};
 
 const LOOP_PATH =
   "M120 32C164 30 203 64 209 108C216 159 181 202 132 208C84 214 40 184 31 138C22 93 48 49 91 37C103 34 113 32 120 32Z";
@@ -64,7 +63,6 @@ export default function Loop({
   state,
   size = 340,
   className,
-  ...props
 }: LoopProps) {
   const prefersReducedMotion = useReducedMotion();
   const visibleLength = getVisibleLength(state, tension);
@@ -100,7 +98,6 @@ export default function Loop({
       }}
       viewBox="0 0 240 240"
       width={size}
-      {...props}
     >
       <motion.path
         d={LOOP_PATH}
