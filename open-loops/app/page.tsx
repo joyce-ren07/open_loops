@@ -44,6 +44,11 @@ const initialLoops: CanvasLoopModel[] = [
     id: "soft-plan",
     label: "A gentler plan",
     createdAt: "2026-06-13T12:00:00.000Z",
+    plan: {
+      when: "2026-06-17T09:00",
+      where: "The quiet table by the window",
+      firstAction: "Open the notebook to a blank page",
+    },
     tension: 2,
     state: "planned",
     size: 142,
@@ -80,6 +85,11 @@ const initialLoops: CanvasLoopModel[] = [
     id: "quiet-plan",
     label: "A quiet next step",
     createdAt: "2026-06-15T12:00:00.000Z",
+    plan: {
+      when: "2026-06-18T16:30",
+      where: "After tea, at the desk",
+      firstAction: "Write the first honest sentence",
+    },
     tension: 4,
     state: "planned",
     size: 166,
@@ -414,8 +424,7 @@ function PlanLoopModal({
               className="mt-3 w-full rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-5 py-3 text-base text-[#332C25] outline-none transition focus:border-[#8B7A68]/35 focus:bg-[#FFFDF8]/78"
               id="plan-when"
               onChange={(event) => setWhen(event.target.value)}
-              placeholder="A real moment"
-              type="text"
+              type="datetime-local"
               value={when}
             />
           </label>
@@ -460,9 +469,205 @@ function PlanLoopModal({
   );
 }
 
+function getScheduledDate(loop: CanvasLoopModel) {
+  if (!loop.plan?.when) {
+    return null;
+  }
+
+  const date = new Date(loop.plan.when);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+}
+
+function formatHorizonDay(date: Date) {
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+  }).format(date);
+}
+
+function formatHorizonTime(date: Date) {
+  return new Intl.DateTimeFormat("en", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getPlannedGroups(loops: CanvasLoopModel[]) {
+  const plannedLoops = loops
+    .map((loop) => ({
+      loop,
+      scheduledDate: getScheduledDate(loop),
+    }))
+    .filter(
+      (
+        item,
+      ): item is {
+        loop: CanvasLoopModel;
+        scheduledDate: Date;
+      } => loopIsPlannedWithDate(item),
+    )
+    .sort(
+      (first, second) =>
+        first.scheduledDate.getTime() - second.scheduledDate.getTime(),
+    );
+
+  return plannedLoops.reduce<
+    {
+      key: string;
+      label: string;
+      loops: typeof plannedLoops;
+    }[]
+  >((groups, plannedLoop) => {
+    const key = plannedLoop.scheduledDate.toISOString().slice(0, 10);
+    const existingGroup = groups.find((group) => group.key === key);
+
+    if (existingGroup) {
+      existingGroup.loops.push(plannedLoop);
+      return groups;
+    }
+
+    groups.push({
+      key,
+      label: formatHorizonDay(plannedLoop.scheduledDate),
+      loops: [plannedLoop],
+    });
+
+    return groups;
+  }, []);
+}
+
+function loopIsPlannedWithDate(item: {
+  loop: CanvasLoopModel;
+  scheduledDate: Date | null;
+}) {
+  return item.loop.state === "planned" && item.scheduledDate !== null;
+}
+
+function HorizonSheet({
+  loops,
+  onClose,
+}: {
+  loops: CanvasLoopModel[];
+  onClose: () => void;
+}) {
+  const plannedGroups = getPlannedGroups(loops);
+
+  return (
+    <motion.div
+      aria-labelledby="horizon-title"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+    >
+      <button
+        aria-label="Close Horizon"
+        className="absolute inset-0 cursor-default bg-[#4C3B2B]/10 backdrop-blur-[2px]"
+        onClick={onClose}
+        type="button"
+      />
+
+      <motion.section
+        className="relative max-h-[82vh] w-full overflow-hidden rounded-t-[2.25rem] border-x border-t border-[#6E6257]/12 bg-[#FCFAF5]/94 px-6 pt-4 pb-8 text-[#332C25] shadow-[0_-28px_90px_rgba(76,59,43,0.13)] backdrop-blur-md sm:max-w-3xl sm:px-10"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="mx-auto mb-7 h-1 w-12 rounded-full bg-[#6E6257]/18" />
+
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <p className="text-[0.7rem] tracking-[0.32em] text-[#6E6257]/62 uppercase">
+              Horizon
+            </p>
+            <h2
+              className="mt-3 max-w-lg text-3xl leading-tight font-light tracking-[-0.045em] sm:text-4xl"
+              id="horizon-title"
+            >
+              Future versions of yourself are holding these intentions.
+            </h2>
+          </div>
+
+          <button
+            aria-label="Close Horizon"
+            className="rounded-full px-2 py-1 text-xl leading-none text-[#6E6257]/65 transition-colors hover:text-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/30 focus-visible:outline-none"
+            onClick={onClose}
+            type="button"
+          >
+            x
+          </button>
+        </div>
+
+        <div className="mt-9 max-h-[50vh] overflow-y-auto pr-1">
+          {plannedGroups.length > 0 ? (
+            <div className="space-y-9">
+              {plannedGroups.map((group) => (
+                <section key={group.key}>
+                  <p className="mb-5 text-sm text-[#6E6257]/72">
+                    {group.label}
+                  </p>
+
+                  <div className="space-y-5">
+                    {group.loops.map(({ loop, scheduledDate }) => (
+                      <motion.div
+                        className="grid grid-cols-[4.25rem_1fr] items-center gap-4"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        key={loop.id}
+                      >
+                        <div className="relative grid size-16 place-items-center">
+                          <Loop
+                            className="overflow-visible opacity-75"
+                            size={62}
+                            state="planned"
+                            tension={Math.max(1, loop.tension - 1)}
+                          />
+                        </div>
+
+                        <div className="border-l border-[#6E6257]/10 pl-5">
+                          <p className="text-xs tracking-[0.18em] text-[#6E6257]/58 uppercase">
+                            {formatHorizonTime(scheduledDate)} -{" "}
+                            {loop.plan?.where}
+                          </p>
+                          <p className="mt-2 text-lg leading-snug font-light tracking-[-0.02em] text-[#332C25]">
+                            {loop.label}
+                          </p>
+                          <p className="mt-2 text-sm leading-6 text-[#6E6257]/78">
+                            First: {loop.plan?.firstAction}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <p className="max-w-sm text-sm leading-6 text-[#6E6257]/72">
+              No future self is holding a plan yet. When a loop has a when,
+              where, and first action, it will rest here.
+            </p>
+          )}
+        </div>
+      </motion.section>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const [loops, setLoops] = useState(initialLoops);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isHorizonOpen, setIsHorizonOpen] = useState(false);
   const [selectedLoopId, setSelectedLoopId] = useState<string | null>(null);
   const [planningLoopId, setPlanningLoopId] = useState<string | null>(null);
   const [task, setTask] = useState("");
@@ -561,6 +766,7 @@ export default function Home() {
               loop={loop}
               onSelect={(loopId) => {
                 setIsModalOpen(false);
+                setIsHorizonOpen(false);
                 setPlanningLoopId(null);
                 setSelectedLoopId(loopId);
               }}
@@ -579,6 +785,23 @@ export default function Home() {
       </motion.p>
 
       <motion.button
+        aria-label="Open Horizon"
+        className="fixed bottom-6 left-6 z-30 rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/55 px-4 py-3 text-xs tracking-[0.22em] text-[#6E6257]/80 uppercase shadow-[0_10px_30px_rgba(76,59,43,0.06)] backdrop-blur-sm transition-colors hover:bg-[#FFFDF8]/70 hover:text-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/35 focus-visible:outline-none sm:bottom-8 sm:left-8"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        onClick={() => {
+          setIsModalOpen(false);
+          setSelectedLoopId(null);
+          setPlanningLoopId(null);
+          setIsHorizonOpen(true);
+        }}
+        transition={{ duration: 0.9, ease: "easeOut", delay: 0.5 }}
+        type="button"
+      >
+        Horizon
+      </motion.button>
+
+      <motion.button
         aria-label="Add an open loop"
         className="fixed right-6 bottom-6 z-30 grid size-11 place-items-center rounded-full border border-[#6E6257]/18 bg-[#F7F4EE]/55 text-2xl leading-none font-light text-[#6E6257]/80 shadow-[0_10px_30px_rgba(76,59,43,0.08)] backdrop-blur-sm transition-colors hover:bg-[#FFFDF8]/70 hover:text-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/35 focus-visible:outline-none sm:right-8 sm:bottom-8"
         initial={{ opacity: 0, scale: 0.94 }}
@@ -587,6 +810,7 @@ export default function Home() {
         onClick={() => {
           setSelectedLoopId(null);
           setPlanningLoopId(null);
+          setIsHorizonOpen(false);
           setIsModalOpen(true);
         }}
         transition={{ duration: 0.9, ease: "easeOut", delay: 0.56 }}
@@ -626,6 +850,12 @@ export default function Home() {
             onClose={() => setPlanningLoopId(null)}
             onSubmit={handleSubmitPlan}
           />
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isHorizonOpen ? (
+          <HorizonSheet loops={loops} onClose={() => setIsHorizonOpen(false)} />
         ) : null}
       </AnimatePresence>
     </main>
