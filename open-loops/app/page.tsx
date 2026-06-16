@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Loop from "@/components/Loop";
 import type { LoopState } from "@/components/Loop";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import type { FormEvent } from "react";
 
@@ -12,6 +12,7 @@ type CanvasLoopModel = {
   label: string;
   createdAt: string;
   plan?: LoopPlan;
+  resurfacedAt?: string;
   tension: number;
   state: LoopState;
   size: number;
@@ -120,6 +121,7 @@ function CanvasLoop({
     left: loop.left,
     top: loop.top,
   } satisfies CSSProperties;
+  const resurfaced = Boolean(loop.resurfacedAt);
 
   return (
     <motion.button
@@ -127,11 +129,11 @@ function CanvasLoop({
       className="absolute cursor-pointer border-0 bg-transparent p-0 focus-visible:ring-2 focus-visible:ring-[#8B7A68]/25 focus-visible:outline-none"
       initial={{
         opacity: 0,
-        scale: 0.9,
+        scale: resurfaced ? 0.72 : 0.9,
         x: "-50%",
-        y: "-50%",
+        y: resurfaced ? "-34%" : "-50%",
         rotate: loop.rotate,
-        filter: "blur(7px)",
+        filter: resurfaced ? "blur(12px)" : "blur(7px)",
       }}
       animate={{
         opacity: 1,
@@ -150,6 +152,7 @@ function CanvasLoop({
     >
       <Loop
         className="overflow-visible drop-shadow-[0_18px_44px_rgba(70,55,40,0.045)]"
+        resurfaced={resurfaced}
         size={loop.size}
         state={loop.state}
         tension={loop.tension}
@@ -483,6 +486,14 @@ function getScheduledDate(loop: CanvasLoopModel) {
   return date;
 }
 
+function getResurfacedPlacement(loop: CanvasLoopModel) {
+  return {
+    left: `${Math.min(86, Math.max(12, Number.parseFloat(loop.left) + 6))}%`,
+    top: `${Math.min(82, Math.max(16, Number.parseFloat(loop.top) - 8))}%`,
+    rotate: loop.rotate - 6,
+  };
+}
+
 function formatHorizonDay(date: Date) {
   return new Intl.DateTimeFormat("en", {
     day: "numeric",
@@ -670,6 +681,7 @@ export default function Home() {
   const [isHorizonOpen, setIsHorizonOpen] = useState(false);
   const [selectedLoopId, setSelectedLoopId] = useState<string | null>(null);
   const [planningLoopId, setPlanningLoopId] = useState<string | null>(null);
+  const [arrivalMessage, setArrivalMessage] = useState<string | null>(null);
   const [task, setTask] = useState("");
   const [mentalPresence, setMentalPresence] = useState(3);
   const selectedLoop =
@@ -680,6 +692,61 @@ export default function Home() {
   function closeModal() {
     setIsModalOpen(false);
   }
+
+  useEffect(() => {
+    function resurfaceDueLoops() {
+      const now = Date.now();
+      let didResurface = false;
+
+      setLoops((currentLoops) =>
+        currentLoops.map((loop) => {
+          const scheduledDate = getScheduledDate(loop);
+
+          if (
+            loop.state !== "planned" ||
+            loop.resurfacedAt ||
+            scheduledDate === null ||
+            scheduledDate.getTime() > now
+          ) {
+            return loop;
+          }
+
+          didResurface = true;
+
+          return {
+            ...loop,
+            ...getResurfacedPlacement(loop),
+            delay: 0,
+            resurfacedAt: new Date(now).toISOString(),
+            state: "open",
+          };
+        }),
+      );
+
+      if (didResurface) {
+        setIsHorizonOpen(false);
+        setArrivalMessage("The moment you planned for has arrived.");
+      }
+    }
+
+    resurfaceDueLoops();
+
+    const timer = window.setInterval(resurfaceDueLoops, 5000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!arrivalMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setArrivalMessage(null);
+    }, 7000);
+
+    return () => window.clearTimeout(timer);
+  }, [arrivalMessage]);
 
   function handleResolveLoop(action: "complete" | "plan" | "later") {
     if (action === "complete") {
@@ -762,7 +829,7 @@ export default function Home() {
         <div className="absolute inset-0">
           {loops.map((loop) => (
             <CanvasLoop
-              key={loop.id}
+              key={`${loop.id}-${loop.resurfacedAt ?? "resting"}`}
               loop={loop}
               onSelect={(loopId) => {
                 setIsModalOpen(false);
@@ -783,6 +850,20 @@ export default function Home() {
       >
         What&apos;s sitting in your mind?
       </motion.p>
+
+      <AnimatePresence>
+        {arrivalMessage ? (
+          <motion.p
+            className="fixed top-8 left-1/2 z-40 max-w-[calc(100vw-3rem)] -translate-x-1/2 rounded-full border border-[#6E6257]/12 bg-[#FCFAF5]/82 px-5 py-3 text-center text-sm text-[#5E544A] shadow-[0_18px_48px_rgba(76,59,43,0.09)] backdrop-blur-md"
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+          >
+            {arrivalMessage}
+          </motion.p>
+        ) : null}
+      </AnimatePresence>
 
       <motion.button
         aria-label="Open Horizon"

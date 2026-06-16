@@ -7,6 +7,7 @@ export type LoopState = "open" | "planned" | "completed";
 type LoopProps = {
   tension: number;
   state: LoopState;
+  resurfaced?: boolean;
   size?: number;
   className?: string;
 };
@@ -18,12 +19,16 @@ function normalizeTension(tension: number) {
   return Math.min(5, Math.max(1, tension));
 }
 
-function getVisibleLength(state: LoopState, tension: number) {
+function getVisibleLength(state: LoopState, tension: number, resurfaced: boolean) {
   if (state === "completed") {
     return 1;
   }
 
   const normalized = normalizeTension(tension);
+
+  if (resurfaced) {
+    return 0.93 - normalized * 0.008;
+  }
 
   if (state === "planned") {
     return 0.988 - normalized * 0.002;
@@ -61,11 +66,12 @@ function getStroke(state: LoopState, tension: number) {
 export default function Loop({
   tension,
   state,
+  resurfaced = false,
   size = 340,
   className,
 }: LoopProps) {
   const prefersReducedMotion = useReducedMotion();
-  const visibleLength = getVisibleLength(state, tension);
+  const visibleLength = getVisibleLength(state, tension, resurfaced);
   const stroke = getStroke(state, tension);
   const isCompleted = state === "completed";
   const isPlanned = state === "planned";
@@ -83,16 +89,24 @@ export default function Loop({
         shouldAnimate
           ? {
               opacity: 1,
-              scale: isPlanned ? [1, 1.006, 1] : [0.97, 1.035, 0.97],
-              x: isPlanned ? [0, 0.6, 0] : [0, 4, -3, 0],
-              y: isPlanned ? [0, -0.8, 0] : [0, -5, 3, 0],
-              rotate: isPlanned ? [-0.4, 0.35, -0.4] : [-3, 2.5, -1.5, -3],
+              scale: isPlanned
+                ? [1, 1.006, 1]
+                : resurfaced
+                  ? [0.99, 1.018, 0.99]
+                  : [0.97, 1.035, 0.97],
+              x: isPlanned ? [0, 0.6, 0] : resurfaced ? [0, 1.8, 0] : [0, 4, -3, 0],
+              y: isPlanned ? [0, -0.8, 0] : resurfaced ? [0, -2.4, 0] : [0, -5, 3, 0],
+              rotate: isPlanned
+                ? [-0.4, 0.35, -0.4]
+                : resurfaced
+                  ? [-0.8, 0.9, -0.8]
+                  : [-3, 2.5, -1.5, -3],
             }
           : { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 }
       }
       transition={{
         opacity: { duration: 1.1, ease: "easeOut" },
-        duration: isPlanned ? 22 : 8.5,
+        duration: isPlanned ? 22 : resurfaced ? 12 : 8.5,
         repeat: shouldAnimate ? Infinity : 0,
         ease: "easeInOut",
       }}
@@ -114,12 +128,14 @@ export default function Loop({
             ? {
                 strokeDashoffset: isPlanned
                   ? [dashOffset, dashOffset + 0.004, dashOffset]
+                  : resurfaced
+                    ? [dashOffset, dashOffset + 0.018, dashOffset]
                   : [dashOffset, dashOffset + 0.045, dashOffset],
               }
             : { strokeDashoffset: 0 }
         }
         transition={{
-          duration: isPlanned ? 24 : 9,
+          duration: isPlanned ? 24 : resurfaced ? 12 : 9,
           repeat: shouldAnimate ? Infinity : 0,
           ease: "easeInOut",
         }}
