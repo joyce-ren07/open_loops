@@ -130,32 +130,6 @@ const starPlacements = [
   { left: "61%", top: "76%", size: 7 },
 ];
 
-function getLoopSeed(id: string) {
-  return id
-    .split("")
-    .reduce((total, character) => total + character.charCodeAt(0), 0);
-}
-
-function getLoopTerritory(loop: CanvasLoopModel) {
-  if (loop.state === "completed") {
-    return {
-      duration: 0,
-      x: [0],
-      y: [0],
-    };
-  }
-
-  const seed = getLoopSeed(loop.id);
-  const baseRadius = loop.state === "planned" ? 18 : loop.resurfacedAt ? 22 : 24;
-  const radius = Math.min(40, baseRadius + (seed % 5) * 3 + loop.tension);
-
-  return {
-    duration: 19 + (seed % 9) + (loop.state === "planned" ? 7 : 0),
-    x: [0, radius * 0.42, -radius * 0.28, radius * 0.16, 0],
-    y: [0, -radius * 0.24, radius * 0.38, -radius * 0.18, 0],
-  };
-}
-
 function CanvasLoop({
   focused,
   loop,
@@ -178,7 +152,6 @@ function CanvasLoop({
   const resurfaced = Boolean(loop.resurfacedAt);
   const labelOpacity = Math.min(0.5 + loop.tension * 0.018, 0.6);
   const labelSize = 12 + (loop.tension - 1) * 0.2;
-  const territory = getLoopTerritory(loop);
 
   return (
     <motion.button
@@ -227,67 +200,49 @@ function CanvasLoop({
       type="button"
       whileTap={{ scale: 0.985 }}
     >
+      <AnimatePresence>
+        {focused ? (
+          <motion.span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-1/2 rounded-full bg-[#8B7A68]/10 blur-2xl"
+            initial={{ opacity: 0, scale: 0.78, x: "-50%", y: "-50%" }}
+            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+            exit={{ opacity: 0, scale: 0.84, x: "-50%", y: "-50%" }}
+            style={{
+              height: loop.size * 0.82,
+              width: loop.size * 0.82,
+            }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      <Loop
+        className="overflow-visible drop-shadow-[0_18px_44px_rgba(70,55,40,0.045)]"
+        focused={focused}
+        resurfaced={resurfaced}
+        size={loop.size}
+        state={loop.state}
+        tension={loop.tension}
+      />
+
       <motion.span
-        className="absolute inset-0 block overflow-visible"
+        className={[
+          "pointer-events-none absolute left-1/2 top-[90%] block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 text-center font-medium leading-snug tracking-[0.01em] text-[#4A4037]",
+          focused
+            ? "whitespace-normal"
+            : "overflow-hidden truncate whitespace-nowrap px-12",
+        ].join(" ")}
         animate={{
-          x: territory.x,
-          y: territory.y,
+          opacity: focused ? 0.84 : labelOpacity,
+          y: 0,
         }}
-        transition={{
-          duration: territory.duration,
-          ease: "easeInOut",
-          ...(loop.state === "completed"
-            ? { repeat: 0 }
-            : {
-                repeat: Infinity,
-                times: [0, 0.24, 0.57, 0.83, 1],
-              }),
+        style={{
+          fontSize: Math.min(focused ? labelSize + 0.3 : labelSize, 13),
         }}
+        transition={{ duration: 0.34, ease: "easeOut" }}
       >
-        <AnimatePresence>
-          {focused ? (
-            <motion.span
-              aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 top-1/2 rounded-full bg-[#8B7A68]/10 blur-2xl"
-              initial={{ opacity: 0, scale: 0.78, x: "-50%", y: "-50%" }}
-              animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-              exit={{ opacity: 0, scale: 0.84, x: "-50%", y: "-50%" }}
-              style={{
-                height: loop.size * 0.82,
-                width: loop.size * 0.82,
-              }}
-              transition={{ duration: 0.55, ease: "easeOut" }}
-            />
-          ) : null}
-        </AnimatePresence>
-
-        <Loop
-          className="overflow-visible drop-shadow-[0_18px_44px_rgba(70,55,40,0.045)]"
-          focused={focused}
-          resurfaced={resurfaced}
-          size={loop.size}
-          state={loop.state}
-          tension={loop.tension}
-        />
-
-        <motion.span
-          className={[
-            "pointer-events-none absolute left-1/2 top-[94%] block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 text-center font-medium leading-snug tracking-[0.01em] text-[#4A4037]",
-            focused
-              ? "whitespace-normal"
-              : "overflow-hidden truncate whitespace-nowrap px-12",
-          ].join(" ")}
-          animate={{
-            opacity: focused ? 0.84 : labelOpacity,
-            y: 0,
-          }}
-          style={{
-            fontSize: Math.min(focused ? labelSize + 0.3 : labelSize, 13),
-          }}
-          transition={{ duration: 0.34, ease: "easeOut" }}
-        >
-          {loop.label}
-        </motion.span>
+        {loop.label}
       </motion.span>
     </motion.button>
   );
@@ -1560,7 +1515,7 @@ export default function Home() {
       </section>
 
       <motion.p
-        className="fixed right-0 bottom-[5.75rem] left-0 z-20 px-6 text-center text-sm tracking-[0.02em] text-[#6E6257] sm:bottom-24 sm:text-base"
+        className="fixed right-0 bottom-8 left-0 z-20 px-6 text-center text-sm tracking-[0.02em] text-[#6E6257] sm:text-base"
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, ease: "easeOut", delay: 0.42 }}
