@@ -91,7 +91,7 @@ export default function Loop({
       className={className}
       fill="none"
       height={size}
-      initial={{ opacity: 0, scale: isCompleted ? 1 : 0.97, rotate: -3 }}
+      initial={{ opacity: 0, scale: isCompleted ? 1 : 0.97 }}
       animate={
         shouldAnimate
           ? {
@@ -117,13 +117,8 @@ export default function Loop({
                 : resurfaced
                   ? [0, -2.4, 0]
                   : [0, -5, 3, 0],
-              rotate: isPlanned
-                ? [-0.4, 0.35, -0.4]
-                : resurfaced
-                  ? [-0.8, 0.9, -0.8]
-                  : [-3, 2.5, -1.5, -3],
             }
-          : { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 }
+          : { opacity: 1, scale: 1, x: 0, y: 0 }
       }
       transition={{
         opacity: { duration: 1.1, ease: "easeOut" },
