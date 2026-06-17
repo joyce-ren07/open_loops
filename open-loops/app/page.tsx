@@ -228,7 +228,7 @@ function CanvasLoop({
 
       <motion.span
         className={[
-          "pointer-events-none absolute left-1/2 top-[82%] block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 text-center font-medium leading-snug tracking-[0.01em] text-[#4A4037]",
+          "pointer-events-none absolute left-1/2 top-[90%] block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 text-center font-medium leading-snug tracking-[0.01em] text-[#4A4037]",
           focused
             ? "whitespace-normal"
             : "overflow-hidden truncate whitespace-nowrap px-12",
