@@ -5,7 +5,7 @@ import Loop from "@/components/Loop";
 import type { LoopState } from "@/components/Loop";
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, PointerEvent } from "react";
 
 type CanvasLoopModel = {
   id: string;
@@ -28,6 +28,13 @@ type LoopPlan = {
   when: string;
   where: string;
   firstAction: string;
+};
+
+type ParsedPlan = {
+  when: Date | null;
+  where: string;
+  isExactTime: boolean;
+  hasMinutePrecision: boolean;
 };
 
 const initialLoops: CanvasLoopModel[] = [
@@ -299,6 +306,181 @@ function formatCompletionDate(completedAt: string) {
   }).format(new Date(completedAt));
 }
 
+function padNumber(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function toPlanDateTimeValue(date: Date) {
+  return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
+}
+
+function startOfToday() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function addDays(date: Date, days: number) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function nextWeekday(targetDay: number) {
+  const today = startOfToday();
+  const daysUntilTarget = (targetDay + 7 - today.getDay()) % 7 || 7;
+  return addDays(today, daysUntilTarget);
+}
+
+function getPlanDay(input: string) {
+  const normalized = input.toLowerCase();
+  const today = startOfToday();
+  const weekdays = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  const weekdayIndex = weekdays.findIndex((weekday) =>
+    normalized.includes(weekday),
+  );
+
+  if (normalized.includes("tomorrow")) {
+    return addDays(today, 1);
+  }
+
+  if (normalized.includes("tonight") || normalized.includes("today")) {
+    return today;
+  }
+
+  if (weekdayIndex >= 0) {
+    return nextWeekday(weekdayIndex);
+  }
+
+  return addDays(today, 1);
+}
+
+function getPlanTime(input: string) {
+  const normalized = input.toLowerCase();
+  const exactTime = normalized.match(
+    /\b(?:at\s*)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/,
+  );
+
+  if (exactTime) {
+    const [, hourText, minuteText, meridiem] = exactTime;
+    let hour = Number(hourText);
+
+    if (meridiem === "pm" && hour < 12) {
+      hour += 12;
+    }
+
+    if (meridiem === "am" && hour === 12) {
+      hour = 0;
+    }
+
+    return {
+      hour,
+      minute: minuteText ? Number(minuteText) : 0,
+      isExactTime: true,
+      hasMinutePrecision: Boolean(minuteText),
+    };
+  }
+
+  if (normalized.includes("after class")) {
+    return { hour: 15, minute: 0, isExactTime: false, hasMinutePrecision: false };
+  }
+
+  if (normalized.includes("morning")) {
+    return { hour: 9, minute: 0, isExactTime: false, hasMinutePrecision: false };
+  }
+
+  if (normalized.includes("afternoon")) {
+    return { hour: 14, minute: 0, isExactTime: false, hasMinutePrecision: false };
+  }
+
+  if (normalized.includes("evening")) {
+    return { hour: 18, minute: 0, isExactTime: false, hasMinutePrecision: false };
+  }
+
+  if (normalized.includes("tonight")) {
+    return { hour: 20, minute: 0, isExactTime: false, hasMinutePrecision: false };
+  }
+
+  return { hour: 15, minute: 0, isExactTime: false, hasMinutePrecision: false };
+}
+
+function titleCase(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function getPlanLocation(input: string) {
+  const normalizedInput = input.trim();
+  const locationMatch = normalizedInput.match(
+    /\b(?:at|in)\s+(?:the\s+)?([a-zA-Z][a-zA-Z\s'-]*?)(?:\s+(?:at|around|by|before|after)\s+\d|\s*$)/i,
+  );
+
+  if (locationMatch?.[1]) {
+    return titleCase(locationMatch[1]);
+  }
+
+  if (input.toLowerCase().includes("library")) {
+    return "Library";
+  }
+
+  return "";
+}
+
+function parsePlanIntention(input: string): ParsedPlan {
+  const trimmedInput = input.trim();
+
+  if (!trimmedInput) {
+    return {
+      when: null,
+      where: "",
+      isExactTime: false,
+      hasMinutePrecision: false,
+    };
+  }
+
+  const day = getPlanDay(trimmedInput);
+  const time = getPlanTime(trimmedInput);
+  const when = new Date(day);
+  when.setHours(time.hour, time.minute, 0, 0);
+
+  return {
+    when,
+    where: getPlanLocation(trimmedInput),
+    isExactTime: time.isExactTime,
+    hasMinutePrecision: time.hasMinutePrecision,
+  };
+}
+
+function formatPlanChipTime(date: Date) {
+  const now = new Date();
+  const tomorrow = addDays(startOfToday(), 1);
+  const dateLabel =
+    date.toDateString() === tomorrow.toDateString()
+      ? "Tomorrow"
+      : date.toDateString() === now.toDateString()
+        ? "Today"
+        : new Intl.DateTimeFormat("en", {
+            day: "numeric",
+            month: "short",
+          }).format(date);
+
+  return `${dateLabel}, ${formatHorizonTime(date)}`;
+}
+
+function getHourAngle(hour: number) {
+  return ((hour % 12) / 12) * 360;
+}
+
 function LoopDetailModal({
   loop,
   onResolve,
@@ -372,6 +554,148 @@ function LoopDetailModal({
   );
 }
 
+function RadialTimeSelector({
+  inferred,
+  onChange,
+}: {
+  inferred: ParsedPlan;
+  onChange: (date: Date, hasMinutePrecision: boolean) => void;
+}) {
+  const selectedDate = inferred.when ?? (() => {
+    const fallback = addDays(startOfToday(), 1);
+    fallback.setHours(15, 0, 0, 0);
+    return fallback;
+  })();
+  const [showMinutes, setShowMinutes] = useState(inferred.hasMinutePrecision);
+  const hourAngle = getHourAngle(selectedDate.getHours());
+  const handleX = 50 + Math.sin((hourAngle * Math.PI) / 180) * 38;
+  const handleY = 50 - Math.cos((hourAngle * Math.PI) / 180) * 38;
+
+  function updateHourFromPointer(event: PointerEvent<HTMLDivElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - bounds.left - bounds.width / 2;
+    const y = event.clientY - bounds.top - bounds.height / 2;
+    const angle = (Math.atan2(x, -y) * 180) / Math.PI;
+    const normalizedAngle = (angle + 360) % 360;
+    const nextHour12 = Math.round(normalizedAngle / 30) % 12 || 12;
+    const nextDate = new Date(selectedDate);
+    const currentHour = selectedDate.getHours();
+    const shouldBePM = currentHour >= 12;
+    nextDate.setHours((nextHour12 % 12) + (shouldBePM ? 12 : 0));
+    onChange(nextDate, showMinutes || selectedDate.getMinutes() !== 0);
+  }
+
+  function updateMinutes(minutes: number) {
+    const nextDate = new Date(selectedDate);
+    nextDate.setMinutes(minutes, 0, 0);
+    onChange(nextDate, true);
+  }
+
+  function toggleMeridiem() {
+    const nextDate = new Date(selectedDate);
+    const currentHour = nextDate.getHours();
+    nextDate.setHours(currentHour >= 12 ? currentHour - 12 : currentHour + 12);
+    onChange(nextDate, showMinutes || nextDate.getMinutes() !== 0);
+  }
+
+  return (
+    <motion.div
+      className="mt-5 rounded-[1.75rem] border border-[#6E6257]/12 bg-[#F7F4EE]/62 p-5"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
+      <p className="text-center text-sm text-[#6E6257]/72">
+        Move around the circle to shift the hour.
+      </p>
+
+      <div
+        aria-label="Adjust hour"
+        aria-valuemax={12}
+        aria-valuemin={1}
+        aria-valuenow={selectedDate.getHours() % 12 || 12}
+        aria-valuetext={formatHorizonTime(selectedDate)}
+        className="relative mx-auto mt-5 size-56 touch-none rounded-full border border-[#8B7A68]/16 bg-[radial-gradient(circle,rgba(255,255,255,0.58),rgba(247,244,238,0.2)_58%,rgba(139,122,104,0.08))]"
+        onPointerDown={updateHourFromPointer}
+        onPointerMove={(event) => {
+          if (event.buttons === 1) {
+            updateHourFromPointer(event);
+          }
+        }}
+        role="slider"
+      >
+        {[12, 3, 6, 9].map((hour) => {
+          const angle = getHourAngle(hour);
+          const x = 50 + Math.sin((angle * Math.PI) / 180) * 42;
+          const y = 50 - Math.cos((angle * Math.PI) / 180) * 42;
+
+          return (
+            <span
+              className="absolute -translate-x-1/2 -translate-y-1/2 text-xs text-[#6E6257]/50"
+              key={hour}
+              style={{ left: `${x}%`, top: `${y}%` }}
+            >
+              {hour}
+            </span>
+          );
+        })}
+
+        <motion.span
+          className="absolute block size-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#6E6257]/78 shadow-[0_0_28px_rgba(110,98,87,0.2)]"
+          animate={{ left: `${handleX}%`, top: `${handleY}%` }}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+        />
+        <div className="absolute inset-[4.35rem] grid place-items-center rounded-full bg-[#FCFAF5]/70 text-center">
+          <span className="text-2xl font-light tracking-[-0.04em]">
+            {formatHorizonTime(selectedDate)}
+          </span>
+          <button
+            className="mt-1 text-xs tracking-[0.18em] text-[#6E6257]/68 uppercase"
+            onClick={toggleMeridiem}
+            type="button"
+          >
+            {selectedDate.getHours() >= 12 ? "PM" : "AM"}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 text-center">
+        <button
+          className="rounded-full px-4 py-2 text-xs tracking-[0.18em] text-[#6E6257]/72 uppercase transition hover:text-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/25 focus-visible:outline-none"
+          onClick={() => setShowMinutes((value) => !value)}
+          type="button"
+        >
+          {showMinutes ? "Hide finer precision" : "Need finer precision?"}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {showMinutes ? (
+          <motion.div
+            className="mt-4 grid grid-cols-4 gap-2"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
+            {[0, 15, 30, 45].map((minute) => (
+              <button
+                className="rounded-full border border-[#6E6257]/12 px-3 py-2 text-sm text-[#6E6257]/80 transition hover:bg-[#FFFDF8]/70 hover:text-[#332C25] focus-visible:ring-2 focus-visible:ring-[#8B7A68]/25 focus-visible:outline-none"
+                key={minute}
+                onClick={() => updateMinutes(minute)}
+                type="button"
+              >
+                :{padNumber(minute)}
+              </button>
+            ))}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 function PlanLoopModal({
   loop,
   onClose,
@@ -381,26 +705,67 @@ function PlanLoopModal({
   onClose: () => void;
   onSubmit: (plan: LoopPlan) => void;
 }) {
-  const [when, setWhen] = useState(loop.plan?.when ?? "");
-  const [where, setWhere] = useState(loop.plan?.where ?? "");
+  const initialWhen = loop.plan?.when ? new Date(loop.plan.when) : null;
+  const [planLanguage, setPlanLanguage] = useState(
+    loop.plan
+      ? `${loop.plan.where} ${initialWhen ? formatPlanChipTime(initialWhen) : ""}`.trim()
+      : "",
+  );
+  const [parsedPlan, setParsedPlan] = useState<ParsedPlan>(
+    loop.plan && initialWhen
+      ? {
+          when: initialWhen,
+          where: loop.plan.where,
+          isExactTime: true,
+          hasMinutePrecision: initialWhen.getMinutes() !== 0,
+        }
+      : parsePlanIntention(""),
+  );
+  const [isTimeOpen, setIsTimeOpen] = useState(false);
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [locationDraft, setLocationDraft] = useState(loop.plan?.where ?? "");
   const [firstAction, setFirstAction] = useState(
     loop.plan?.firstAction ?? "",
   );
   const isSpecific =
-    when.trim().length > 0 &&
-    where.trim().length > 0 &&
+    parsedPlan.when !== null &&
+    parsedPlan.where.trim().length > 0 &&
     firstAction.trim().length > 0;
+
+  function handlePlanLanguageChange(value: string) {
+    const nextParsedPlan = parsePlanIntention(value);
+    setPlanLanguage(value);
+    setParsedPlan(nextParsedPlan);
+    setLocationDraft(nextParsedPlan.where);
+  }
+
+  function handleTimeChange(date: Date, hasMinutePrecision: boolean) {
+    setParsedPlan((currentPlan) => ({
+      ...currentPlan,
+      when: date,
+      isExactTime: true,
+      hasMinutePrecision,
+    }));
+  }
+
+  function handleLocationChange(value: string) {
+    setLocationDraft(value);
+    setParsedPlan((currentPlan) => ({
+      ...currentPlan,
+      where: value,
+    }));
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!isSpecific) {
+    if (!isSpecific || !parsedPlan.when) {
       return;
     }
 
     onSubmit({
-      when: when.trim(),
-      where: where.trim(),
+      when: toPlanDateTimeValue(parsedPlan.when),
+      where: parsedPlan.where.trim(),
       firstAction: firstAction.trim(),
     });
   }
@@ -423,7 +788,7 @@ function PlanLoopModal({
       />
 
       <motion.form
-        className="relative w-full max-w-md rounded-[2rem] border border-[#6E6257]/12 bg-[#FCFAF5]/92 px-7 py-8 text-[#332C25] shadow-[0_28px_80px_rgba(76,59,43,0.14)] backdrop-blur-md"
+        className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-[2rem] border border-[#6E6257]/12 bg-[#FCFAF5]/92 px-7 py-8 text-[#332C25] shadow-[0_28px_80px_rgba(76,59,43,0.14)] backdrop-blur-md"
         initial={{ opacity: 0, y: 16, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 12, scale: 0.98 }}
@@ -442,29 +807,74 @@ function PlanLoopModal({
         </h2>
 
         <div className="mt-9 space-y-6">
-          <label className="block text-sm text-[#6E6257]" htmlFor="plan-when">
-            When?
-            <input
+          <label className="block text-sm text-[#6E6257]" htmlFor="plan-language">
+            Say when and where, naturally.
+            <textarea
               autoFocus
-              className="mt-3 w-full rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-5 py-3 text-base text-[#332C25] outline-none transition focus:border-[#8B7A68]/35 focus:bg-[#FFFDF8]/78"
-              id="plan-when"
-              onChange={(event) => setWhen(event.target.value)}
-              type="datetime-local"
-              value={when}
+              className="mt-3 min-h-24 w-full resize-none rounded-[1.5rem] border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-5 py-4 text-base leading-7 text-[#332C25] outline-none transition focus:border-[#8B7A68]/35 focus:bg-[#FFFDF8]/78"
+              id="plan-language"
+              onChange={(event) => handlePlanLanguageChange(event.target.value)}
+              placeholder="Tomorrow after class at the library"
+              value={planLanguage}
             />
           </label>
 
-          <label className="block text-sm text-[#6E6257]" htmlFor="plan-where">
-            Where?
-            <input
-              className="mt-3 w-full rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-5 py-3 text-base text-[#332C25] outline-none transition focus:border-[#8B7A68]/35 focus:bg-[#FFFDF8]/78"
-              id="plan-where"
-              onChange={(event) => setWhere(event.target.value)}
-              placeholder="The place it will happen"
-              type="text"
-              value={where}
-            />
-          </label>
+          <div>
+            <p className="mb-3 text-sm text-[#6E6257]">What Future You is holding</p>
+            <div className="flex flex-wrap gap-2">
+              {parsedPlan.when ? (
+                <button
+                  className="rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-4 py-2 text-sm text-[#4F463D] transition hover:bg-[#FFFDF8]/76 focus-visible:ring-2 focus-visible:ring-[#8B7A68]/30 focus-visible:outline-none"
+                  onClick={() => setIsTimeOpen((value) => !value)}
+                  type="button"
+                >
+                  ✓ {formatPlanChipTime(parsedPlan.when)}
+                </button>
+              ) : null}
+
+              {parsedPlan.where ? (
+                <button
+                  className="rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-4 py-2 text-sm text-[#4F463D] transition hover:bg-[#FFFDF8]/76 focus-visible:ring-2 focus-visible:ring-[#8B7A68]/30 focus-visible:outline-none"
+                  onClick={() => setIsLocationOpen((value) => !value)}
+                  type="button"
+                >
+                  ✓ {parsedPlan.where}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {isTimeOpen ? (
+              <RadialTimeSelector
+                inferred={parsedPlan}
+                onChange={handleTimeChange}
+              />
+            ) : null}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {isLocationOpen ? (
+              <motion.label
+                className="block text-sm text-[#6E6257]"
+                htmlFor="plan-location-refine"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                Refine place
+                <input
+                  className="mt-3 w-full rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-5 py-3 text-base text-[#332C25] outline-none transition focus:border-[#8B7A68]/35 focus:bg-[#FFFDF8]/78"
+                  id="plan-location-refine"
+                  onChange={(event) => handleLocationChange(event.target.value)}
+                  placeholder="The place it will happen"
+                  type="text"
+                  value={locationDraft}
+                />
+              </motion.label>
+            ) : null}
+          </AnimatePresence>
 
           <label
             className="block text-sm text-[#6E6257]"
@@ -487,7 +897,7 @@ function PlanLoopModal({
           disabled={!isSpecific}
           type="submit"
         >
-          Let it rest here
+          Entrust it to Future You
         </button>
       </motion.form>
     </motion.div>
