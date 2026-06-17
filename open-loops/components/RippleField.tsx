@@ -33,7 +33,7 @@ function getRippleConfig(state: LoopState, tension: number, prevalence: number) 
     return {
       amplitude: 0.035 + tension * 0.003,
       count: 2,
-      opacity: 0.12,
+      opacity: 0.15,
       radius: prevalence * 0.66,
       spread: 0.18,
     };
@@ -42,7 +42,7 @@ function getRippleConfig(state: LoopState, tension: number, prevalence: number) 
   return {
     amplitude: 0.08 + tension * 0.012,
     count: 4,
-    opacity: 0.18,
+    opacity: 0.23,
     radius: prevalence,
     spread: 0.36,
   };
@@ -61,7 +61,7 @@ export default function RippleField({
   const isCompleted = state === "completed";
   const shouldAnimate = !prefersReducedMotion && !isCompleted;
   const viewBoxSize = 240;
-  const baseDuration = state === "planned" ? 30 : 20;
+  const baseDuration = state === "planned" ? 30 : 11;
 
   return (
     <svg
@@ -78,7 +78,7 @@ export default function RippleField({
         </filter>
         <radialGradient id={`ripple-fade-${seed}`} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#6E6257" stopOpacity="0" />
-          <stop offset="62%" stopColor="#6E6257" stopOpacity="0.2" />
+          <stop offset="62%" stopColor="#6E6257" stopOpacity="0.26" />
           <stop offset="100%" stopColor="#6E6257" stopOpacity="0" />
         </radialGradient>
       </defs>
@@ -89,15 +89,19 @@ export default function RippleField({
           cy="120"
           fill={`url(#ripple-fade-${seed})`}
           initial={{ opacity: 0 }}
-          animate={{ opacity: focused ? 0.13 : 0.075 }}
+          animate={{ opacity: focused ? 0.16 : 0.1 }}
           r={config.radius * 0.34}
           transition={{ duration: 1.2, ease: "easeOut" }}
         />
       ) : null}
 
       {Array.from({ length: config.count }).map((_, index) => {
-        const duration = baseDuration + ((seed + index * 5) % 8) + index * 2;
-        const delay = -((seed % 7) + index * duration * 0.32);
+        const isOpen = state === "open";
+        const duration = isOpen
+          ? baseDuration + ((seed + index * 5) % 5)
+          : baseDuration + ((seed + index * 5) % 8) + index * 2;
+        const pulsePause = isOpen ? 8 + ((seed + index * 7) % 13) : 0;
+        const delay = -((seed % 11) + index * (isOpen ? 3.7 : duration * 0.32));
         const path = RIPPLE_PATHS[(seed + index) % RIPPLE_PATHS.length];
         const baseScale = state === "planned" ? 0.54 + index * 0.11 : 0.42 + index * 0.13;
         const maxScale = state === "planned" ? baseScale + config.spread : baseScale + config.spread;
@@ -119,7 +123,9 @@ export default function RippleField({
                       state === "planned"
                         ? [opacity * 0.38, opacity * 0.58, opacity * 0.28]
                         : [0, opacity, opacity * 0.34, 0],
-                    scale: [baseScale, maxScale, maxScale + config.amplitude],
+                    scale: isOpen
+                      ? [baseScale, maxScale * 0.9, maxScale + config.amplitude]
+                      : [baseScale, maxScale, maxScale + config.amplitude],
                     x: [120, 120 + ((seed + index) % 3) - 1, 120],
                     y: [120, 120 - (((seed + index) % 4) - 1.5), 120],
                   }
@@ -137,6 +143,7 @@ export default function RippleField({
               duration,
               ease: "easeInOut",
               repeat: shouldAnimate ? Infinity : 0,
+              repeatDelay: shouldAnimate && isOpen ? pulsePause : 0,
             }}
           >
             <path
@@ -144,8 +151,8 @@ export default function RippleField({
               stroke="#6E6257"
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeOpacity={state === "planned" ? 0.32 : 0.42}
-              strokeWidth={state === "planned" ? 1.05 : 1.15 + tension * 0.05}
+              strokeOpacity={state === "planned" ? 0.38 : 0.5}
+              strokeWidth={state === "planned" ? 1.12 : 1.28 + tension * 0.06}
               transform="translate(-120 -120)"
             />
           </motion.g>
