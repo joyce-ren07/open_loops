@@ -1515,7 +1515,7 @@ export default function Home() {
       </section>
 
       <motion.p
-        className="fixed right-0 bottom-8 left-0 z-20 px-6 text-center text-sm tracking-[0.02em] text-[#6E6257] sm:text-base"
+        className="fixed right-0 bottom-[5.75rem] left-0 z-20 px-6 text-center text-sm tracking-[0.02em] text-[#6E6257] sm:bottom-24 sm:text-base"
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, ease: "easeOut", delay: 0.42 }}
