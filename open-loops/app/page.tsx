@@ -612,6 +612,10 @@ function RadialTimeSelector({
 
       <div
         aria-label="Adjust hour"
+        aria-valuemax={12}
+        aria-valuemin={1}
+        aria-valuenow={selectedDate.getHours() % 12 || 12}
+        aria-valuetext={formatHorizonTime(selectedDate)}
         className="relative mx-auto mt-5 size-56 touch-none rounded-full border border-[#8B7A68]/16 bg-[radial-gradient(circle,rgba(255,255,255,0.58),rgba(247,244,238,0.2)_58%,rgba(139,122,104,0.08))]"
         onPointerDown={updateHourFromPointer}
         onPointerMove={(event) => {
