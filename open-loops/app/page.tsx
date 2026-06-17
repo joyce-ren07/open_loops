@@ -131,22 +131,32 @@ const starPlacements = [
 ];
 
 function CanvasLoop({
+  focused,
   loop,
+  onBlur,
+  onFocus,
   onSelect,
 }: {
+  focused: boolean;
   loop: CanvasLoopModel;
+  onBlur: () => void;
+  onFocus: (loopId: string) => void;
   onSelect: (loopId: string) => void;
 }) {
   const style = {
     left: loop.left,
     top: loop.top,
+    height: loop.size,
+    width: loop.size,
   } satisfies CSSProperties;
   const resurfaced = Boolean(loop.resurfacedAt);
+  const labelOpacity = Math.min(0.5 + loop.tension * 0.018, 0.6);
+  const labelSize = 12 + (loop.tension - 1) * 0.2;
 
   return (
     <motion.button
       aria-label={loop.label}
-      className="absolute cursor-pointer border-0 bg-transparent p-0 focus-visible:ring-2 focus-visible:ring-[#8B7A68]/25 focus-visible:outline-none"
+      className="absolute overflow-visible border-0 bg-transparent p-0 focus-visible:ring-2 focus-visible:ring-[#8B7A68]/25 focus-visible:outline-none"
       initial={{
         opacity: 0,
         scale: resurfaced ? 0.72 : 0.9,
@@ -157,26 +167,85 @@ function CanvasLoop({
       }}
       animate={{
         opacity: 1,
-        scale: 1,
+        scale: focused ? 1.045 : 1,
         x: "-50%",
         y: "-50%",
         rotate: loop.rotate,
         filter: "blur(0px)",
       }}
       transition={{ duration: 1.2, ease: "easeOut", delay: loop.delay }}
-      onClick={() => onSelect(loop.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(loop.id);
+        }
+      }}
+      onPointerEnter={(event) => {
+        if (event.pointerType !== "touch") {
+          onFocus(loop.id);
+        }
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType !== "touch") {
+          onBlur();
+        }
+      }}
+      onPointerUp={(event) => {
+        if (event.pointerType === "touch" && !focused) {
+          onFocus(loop.id);
+          return;
+        }
+
+        onSelect(loop.id);
+      }}
       style={style}
       type="button"
-      whileHover={{ scale: 1.018 }}
       whileTap={{ scale: 0.985 }}
     >
+      <AnimatePresence>
+        {focused ? (
+          <motion.span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-1/2 rounded-full bg-[#8B7A68]/10 blur-2xl"
+            initial={{ opacity: 0, scale: 0.78, x: "-50%", y: "-50%" }}
+            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+            exit={{ opacity: 0, scale: 0.84, x: "-50%", y: "-50%" }}
+            style={{
+              height: loop.size * 0.82,
+              width: loop.size * 0.82,
+            }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
+          />
+        ) : null}
+      </AnimatePresence>
+
       <Loop
         className="overflow-visible drop-shadow-[0_18px_44px_rgba(70,55,40,0.045)]"
+        focused={focused}
         resurfaced={resurfaced}
         size={loop.size}
         state={loop.state}
         tension={loop.tension}
       />
+
+      <motion.span
+        className={[
+          "pointer-events-none absolute left-1/2 top-full mt-2 block -translate-x-1/2 text-center leading-snug tracking-[0.01em] text-[#4A4037]",
+          focused
+            ? "max-w-[18rem] whitespace-normal"
+            : "max-w-[10.5rem] truncate whitespace-nowrap",
+        ].join(" ")}
+        animate={{
+          opacity: focused ? 0.84 : labelOpacity,
+          y: focused ? 2 : 0,
+        }}
+        style={{
+          fontSize: focused ? Math.min(labelSize + 0.5, 13.5) : labelSize,
+        }}
+        transition={{ duration: 0.34, ease: "easeOut" }}
+      >
+        {loop.label}
+      </motion.span>
     </motion.button>
   );
 }
@@ -1235,6 +1304,7 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHorizonOpen, setIsHorizonOpen] = useState(false);
   const [isConstellationOpen, setIsConstellationOpen] = useState(false);
+  const [focusedLoopId, setFocusedLoopId] = useState<string | null>(null);
   const [selectedLoopId, setSelectedLoopId] = useState<string | null>(null);
   const [planningLoopId, setPlanningLoopId] = useState<string | null>(null);
   const [arrivalMessage, setArrivalMessage] = useState<string | null>(null);
@@ -1428,12 +1498,16 @@ export default function Home() {
         <div className="absolute inset-0">
           {canvasLoops.map((loop) => (
             <CanvasLoop
+              focused={focusedLoopId === loop.id}
               key={`${loop.id}-${loop.resurfacedAt ?? "resting"}-${loop.completedAt ?? "open"}`}
               loop={loop}
+              onBlur={() => setFocusedLoopId(null)}
+              onFocus={setFocusedLoopId}
               onSelect={(loopId) => {
                 setIsModalOpen(false);
                 setIsHorizonOpen(false);
                 setIsConstellationOpen(false);
+                setFocusedLoopId(null);
                 setPlanningLoopId(null);
                 setSelectedLoopId(loopId);
               }}
@@ -1473,6 +1547,7 @@ export default function Home() {
         onClick={() => {
           setIsModalOpen(false);
           setIsConstellationOpen(false);
+          setFocusedLoopId(null);
           setSelectedLoopId(null);
           setPlanningLoopId(null);
           setIsHorizonOpen(true);
@@ -1491,6 +1566,7 @@ export default function Home() {
         onClick={() => {
           setIsModalOpen(false);
           setIsHorizonOpen(false);
+          setFocusedLoopId(null);
           setSelectedLoopId(null);
           setPlanningLoopId(null);
           setIsConstellationOpen(true);
@@ -1508,6 +1584,7 @@ export default function Home() {
         animate={{ opacity: 1, scale: 1 }}
         whileTap={{ scale: 0.96 }}
         onClick={() => {
+          setFocusedLoopId(null);
           setSelectedLoopId(null);
           setPlanningLoopId(null);
           setIsHorizonOpen(false);

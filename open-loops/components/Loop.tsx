@@ -7,6 +7,7 @@ export type LoopState = "open" | "planned" | "completed";
 type LoopProps = {
   tension: number;
   state: LoopState;
+  focused?: boolean;
   resurfaced?: boolean;
   size?: number;
   className?: string;
@@ -70,6 +71,7 @@ function getStroke(state: LoopState, tension: number) {
 export default function Loop({
   tension,
   state,
+  focused = false,
   resurfaced = false,
   size = 340,
   className,
@@ -95,10 +97,16 @@ export default function Loop({
           ? {
               opacity: 1,
               scale: isPlanned
-                ? [1, 1.006, 1]
+                ? focused
+                  ? [1, 1.012, 1]
+                  : [1, 1.006, 1]
                 : resurfaced
-                  ? [0.99, 1.018, 0.99]
-                  : [0.97, 1.035, 0.97],
+                  ? focused
+                    ? [0.99, 1.026, 0.99]
+                    : [0.99, 1.018, 0.99]
+                  : focused
+                    ? [0.97, 1.05, 0.97]
+                    : [0.97, 1.035, 0.97],
               x: isPlanned
                 ? [0, 0.6, 0]
                 : resurfaced
@@ -134,7 +142,7 @@ export default function Loop({
         strokeDashoffset={isCompleted ? 0 : dashOffset}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeOpacity={stroke.opacity}
+        strokeOpacity={focused ? Math.min(stroke.opacity + 0.08, 0.66) : stroke.opacity}
         strokeWidth={stroke.width}
         animate={
           isCompleted
