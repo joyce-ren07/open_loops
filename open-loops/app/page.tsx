@@ -162,7 +162,6 @@ function CanvasLoop({
         scale: resurfaced ? 0.72 : 0.9,
         x: "-50%",
         y: resurfaced ? "-34%" : "-50%",
-        rotate: loop.rotate,
         filter: resurfaced ? "blur(12px)" : "blur(7px)",
       }}
       animate={{
@@ -170,7 +169,6 @@ function CanvasLoop({
         scale: focused ? 1.045 : 1,
         x: "-50%",
         y: "-50%",
-        rotate: loop.rotate,
         filter: "blur(0px)",
       }}
       transition={{ duration: 1.2, ease: "easeOut", delay: loop.delay }}
@@ -230,14 +228,14 @@ function CanvasLoop({
 
       <motion.span
         className={[
-          "pointer-events-none absolute left-1/2 top-full mt-2 block -translate-x-1/2 text-center leading-snug tracking-[0.01em] text-[#4A4037]",
+          "pointer-events-none absolute left-1/2 top-full mt-2 block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 text-center leading-snug tracking-[0.01em] text-[#4A4037]",
           focused
-            ? "max-w-[18rem] whitespace-normal"
-            : "max-w-[10.5rem] truncate whitespace-nowrap",
+            ? "whitespace-normal"
+            : "overflow-hidden truncate whitespace-nowrap px-12",
         ].join(" ")}
         animate={{
           opacity: focused ? 0.84 : labelOpacity,
-          y: focused ? 2 : 0,
+          y: 0,
         }}
         style={{
           fontSize: focused ? Math.min(labelSize + 0.5, 13.5) : labelSize,
