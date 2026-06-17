@@ -228,7 +228,7 @@ function CanvasLoop({
 
       <motion.span
         className={[
-          "pointer-events-none absolute left-1/2 top-full mt-2 block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 text-center leading-snug tracking-[0.01em] text-[#4A4037]",
+          "pointer-events-none absolute left-1/2 top-[82%] block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 text-center font-medium leading-snug tracking-[0.01em] text-[#4A4037]",
           focused
             ? "whitespace-normal"
             : "overflow-hidden truncate whitespace-nowrap px-12",
@@ -238,7 +238,7 @@ function CanvasLoop({
           y: 0,
         }}
         style={{
-          fontSize: focused ? Math.min(labelSize + 0.5, 13.5) : labelSize,
+          fontSize: Math.min(focused ? labelSize + 0.3 : labelSize, 13),
         }}
         transition={{ duration: 0.34, ease: "easeOut" }}
       >
