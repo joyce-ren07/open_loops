@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Loop from "@/components/Loop";
+import RippleField from "@/components/RippleField";
 import type { LoopState } from "@/components/Loop";
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
@@ -169,11 +170,12 @@ function CanvasLoop({
   onFocus: (loopId: string) => void;
   onSelect: (loopId: string) => void;
 }) {
+  const fieldSize = Math.round(loop.size * 1.42);
   const style = {
     left: loop.left,
     top: loop.top,
-    height: loop.size,
-    width: loop.size,
+    height: fieldSize,
+    width: fieldSize,
   } satisfies CSSProperties;
   const resurfaced = Boolean(loop.resurfacedAt);
   const labelOpacity = Math.min(0.5 + loop.tension * 0.018, 0.6);
@@ -261,18 +263,18 @@ function CanvasLoop({
           ) : null}
         </AnimatePresence>
 
-        <Loop
-          className="overflow-visible drop-shadow-[0_18px_44px_rgba(70,55,40,0.045)]"
+        <RippleField
           focused={focused}
-          resurfaced={resurfaced}
-          size={loop.size}
+          prevalence={loop.size}
+          seed={getLoopSeed(loop.id)}
+          size={fieldSize}
           state={loop.state}
           tension={loop.tension}
         />
 
         <motion.span
           className={[
-            "pointer-events-none absolute left-1/2 top-[94%] block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 text-center font-medium leading-snug tracking-[0.01em] text-[#4A4037]",
+            "pointer-events-none absolute left-1/2 top-1/2 block min-h-5 w-72 max-w-[72vw] -translate-x-1/2 -translate-y-1/2 text-center font-medium leading-snug tracking-[0.01em] text-[#4A4037]",
             focused
               ? "whitespace-normal"
               : "overflow-hidden truncate whitespace-nowrap px-12",
@@ -1523,6 +1525,7 @@ export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#F7F4EE] text-[#332C25]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.82),rgba(247,244,238,0)_32rem)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_32%_30%,rgba(110,98,87,0.075),transparent_30rem),radial-gradient(ellipse_at_72%_62%,rgba(110,98,87,0.055),transparent_28rem),linear-gradient(180deg,rgba(255,255,255,0.12),rgba(139,122,104,0.045))]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] mix-blend-multiply [background-image:linear-gradient(115deg,rgba(91,74,56,0.08)_0.5px,transparent_0.5px),linear-gradient(rgba(91,74,56,0.05)_0.5px,transparent_0.5px)] [background-size:38px_38px]" />
 
       <section
