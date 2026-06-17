@@ -832,13 +832,13 @@ function PlanLoopModal({
                 </button>
               ) : null}
 
-              {parsedPlan.where ? (
+              {parsedPlan.where || planLanguage.trim() ? (
                 <button
                   className="rounded-full border border-[#6E6257]/14 bg-[#F7F4EE]/72 px-4 py-2 text-sm text-[#4F463D] transition hover:bg-[#FFFDF8]/76 focus-visible:ring-2 focus-visible:ring-[#8B7A68]/30 focus-visible:outline-none"
                   onClick={() => setIsLocationOpen((value) => !value)}
                   type="button"
                 >
-                  ✓ {parsedPlan.where}
+                  {parsedPlan.where ? `✓ ${parsedPlan.where}` : "Add place"}
                 </button>
               ) : null}
             </div>
@@ -1365,7 +1365,11 @@ export default function Home() {
         loop.id === planningLoopId
           ? {
               ...loop,
+              completedAt: undefined,
+              delay: 0,
+              integratedAt: undefined,
               plan,
+              resurfacedAt: undefined,
               state: "planned",
             }
           : loop,
